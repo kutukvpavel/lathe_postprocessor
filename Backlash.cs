@@ -1,6 +1,7 @@
 using System.Text;
 using Gcodes;
 using Gcodes.Ast;
+using System.Collections.Generic;
 
 namespace LathePostprocessor
 {
@@ -37,7 +38,8 @@ namespace LathePostprocessor
             {
                 if (DirectionMultiplier == 0) return true;
                 return (CurrentIdealPosition < newPos && DirectionMultiplier > 0) ||
-                    (CurrentIdealPosition > newPos && DirectionMultiplier < 0);
+                    (CurrentIdealPosition > newPos && DirectionMultiplier < 0) ||
+                    (CurrentIdealPosition == newPos);
             }
         }
 
@@ -47,6 +49,9 @@ namespace LathePostprocessor
         Axis AxisA;
 
         Dictionary<ArgumentKind, Axis> Axes;
+
+        List<Code> Preamble = new List<Code>() { new Gcode(55, new List<Argument>(), new Gcodes.Tokens.Span()) };
+        List<Code> Postamble = new List<Code>() { new Gcode(54, new List<Argument>(), new Gcodes.Tokens.Span()) };
 
         public NoLash(double x, double y, double z, double a)
         {
@@ -66,10 +71,18 @@ namespace LathePostprocessor
 
         public void Compensate(TextReader input, TextWriter output)
         {
+            foreach (var item in Preamble)
+            {
+                output.WriteLine(item.ToString());   
+            }
             string? line;
             while ((line = input.ReadLine()) != null)
             {
                 CompensateLine(new Parser(line).Parse(), output);
+            }
+            foreach (var item in Postamble)
+            {
+                output.WriteLine(item.ToString());   
             }
         }
 
